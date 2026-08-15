@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Header from '@/components/Header'
 import ScoreRing from '@/components/ScoreRing'
 import SleepStrip from '@/components/SleepStrip'
@@ -29,9 +29,50 @@ export default function Home() {
   const [activeSheet, setActiveSheet] = useState<string | null>(null)
   const [brief, setBrief] = useState<string | null>(null)
   const [briefLoading, setBriefLoading] = useState(false)
+  const [sleepData, setSleepData] = useState<any>(null)
+  const [weatherData, setWeatherData] = useState<any>(null)
+  const [dataLoading, setDataLoading] = useState(true)
 
   const openSheet = (name: string) => setActiveSheet(name)
   const closeSheet = () => setActiveSheet(null)
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [sleepRes, weatherRes] = await Promise.all([
+          fetch('/api/sleep'),
+          fetch('/api/weather'),
+        ])
+        const [sleep, weather] = await Promise.all([
+          sleepRes.json(),
+          weatherRes.json(),
+        ])
+        setSleepData(sleep)
+        setWeatherData(weather)
+      } catch (e) {
+        console.error('Erreur chargement données', e)
+      }
+      setDataLoading(false)
+    }
+    loadData()
+  }, [])
+
+  const sleepHours = sleepData?.sleep
+    ? `${Math.floor(sleepData.sleep.duree_totale_min / 60)}h${sleepData.sleep.duree_totale_min % 60 > 0 ? (sleepData.sleep.duree_totale_min % 60) : ''}`
+    : '—'
+
+  const tempMax = weatherData?.temp_max ? `${Math.round(weatherData.temp_max)}°C` : '—'
+  const weatherSubtitle = weatherData
+    ? weatherData.temp_max > 35
+      ? `Pas de sortie · chaleur extrême`
+      : weatherData.temp_max > 28
+      ? `Sortie possible le soir`
+      : `Conditions favorables`
+    : '—'
+
+  const weatherIcon = weatherData
+    ? weatherData.temp_max > 30 ? '☀️' : weatherData.precipitation_mm > 0 ? '🌧️' : '⛅'
+    : '🌤️'
 
   return (
     <main style={{ paddingBottom: 80 }}>
@@ -39,7 +80,6 @@ export default function Home() {
 
       {activeTab === 'accueil' && (
         <>
-          {/* Bouton générer brief */}
           <div style={{ padding: '16px 20px 0' }}>
             <button
               onClick={async () => {
@@ -69,22 +109,25 @@ export default function Home() {
             </button>
           </div>
 
-          <ScoreRing 
-            score={76} 
-            label="Récupération" 
+          <ScoreRing
+            score={76}
+            label="Récupération"
             tag="Bon · entraîne-toi normalement"
-            date="14 août"
+            date={sleepData?.date
+              ? new Date(sleepData.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
+              : '14 août'}
           />
 
           <SleepStrip stages={SLEEP_STAGES} />
 
-          {/* Sections */}
           <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 8 }}>
             <SectionCard
               icon="🌙"
               iconBg="#13082a"
-              title="Sommeil · 7h20"
-              subtitle="20 micro-réveils · VFC 82ms · FC 49"
+              title={`Sommeil · ${sleepHours}`}
+              subtitle={sleepData?.sleep
+                ? `${sleepData.sleep.micro_reveils} micro-réveils · VFC ${sleepData.hrv}ms · FC ${sleepData.fc}`
+                : dataLoading ? 'Chargement...' : 'Données indisponibles'}
               onClick={() => openSheet('sleep')}
             />
             <SectionCard
@@ -97,10 +140,10 @@ export default function Home() {
               onClick={() => openSheet('sport')}
             />
             <SectionCard
-              icon="☀️"
+              icon={weatherIcon}
               iconBg="#1a1300"
-              title="Météo · 39°C"
-              subtitle="Pas de sortie · chaleur extrême"
+              title={`Météo · ${tempMax}`}
+              subtitle={weatherSubtitle}
               onClick={() => openSheet('meteo')}
             />
             <SectionCard
@@ -114,7 +157,7 @@ export default function Home() {
               icon="🍽️"
               iconBg="#1a0d00"
               title="Alimentation"
-              subtitle="2 repas enregistrés · midi manquant"
+              subtitle="Ajoute ton premier repas"
               onClick={() => openSheet('food')}
             />
           </div>
@@ -124,34 +167,20 @@ export default function Home() {
       {activeTab === 'chat' && <ChatScreen />}
       {activeTab === 'stats' && <StatsScreen />}
 
-      {/* OVERLAY */}
       {activeSheet && (
         <div
           onClick={closeSheet}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.65)',
-            zIndex: 100,
-          }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 100 }}
         />
       )}
 
       {/* SHEET BRIEF */}
       {activeSheet === 'brief' && (
         <div style={{
-          position: 'fixed',
-          bottom: 0,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          width: '100%',
-          maxWidth: 430,
-          background: 'var(--surface)',
-          borderRadius: '20px 20px 0 0',
-          padding: '14px 20px 40px',
-          zIndex: 101,
-          maxHeight: '85vh',
-          overflowY: 'auto',
+          position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
+          width: '100%', maxWidth: 430, background: 'var(--surface)',
+          borderRadius: '20px 20px 0 0', padding: '14px 20px 40px', zIndex: 101,
+          maxHeight: '85vh', overflowY: 'auto',
         }}>
           <div style={{ width: 32, height: 4, background: '#2a2a2a', borderRadius: 2, margin: '0 auto 16px' }} />
           <button onClick={closeSheet} style={{ position: 'absolute', top: 14, right: 20, color: 'var(--text-muted)', fontSize: 18 }}>✕</button>
@@ -182,14 +211,9 @@ export default function Home() {
               setBriefLoading(false)
             }}
             style={{
-              width: '100%',
-              padding: 12,
-              background: 'transparent',
-              border: '0.5px solid var(--accent)',
-              borderRadius: '10px',
-              color: 'var(--accent)',
-              fontSize: 12,
-              fontWeight: 500,
+              width: '100%', padding: 12, background: 'transparent',
+              border: '0.5px solid var(--accent)', borderRadius: '10px',
+              color: 'var(--accent)', fontSize: 12, fontWeight: 500,
             }}>
             {briefLoading ? 'Génération...' : 'Régénérer le brief'}
           </button>
@@ -199,46 +223,29 @@ export default function Home() {
       {/* SHEET SOMMEIL */}
       {activeSheet === 'sleep' && (
         <div style={{
-          position: 'fixed',
-          bottom: 0,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          width: '100%',
-          maxWidth: 430,
-          background: 'var(--surface)',
-          borderRadius: '20px 20px 0 0',
-          padding: '14px 20px 40px',
-          zIndex: 101,
+          position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
+          width: '100%', maxWidth: 430, background: 'var(--surface)',
+          borderRadius: '20px 20px 0 0', padding: '14px 20px 40px', zIndex: 101,
         }}>
           <div style={{ width: 32, height: 4, background: '#2a2a2a', borderRadius: 2, margin: '0 auto 16px' }} />
           <button onClick={closeSheet} style={{ position: 'absolute', top: 14, right: 20, color: 'var(--text-muted)', fontSize: 18 }}>✕</button>
           <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 16 }}>Détail sommeil</div>
           {[
-            { label: 'Durée', value: '7h20', tag: 'Correct', color: 'var(--good)' },
-            { label: 'Profond', value: '92 min', tag: 'Bon', color: 'var(--good)' },
-            { label: 'REM', value: '54 min', tag: 'Juste', color: 'var(--warn)' },
-            { label: 'Micro-réveils', value: '20', tag: 'Agité', color: 'var(--warn)' },
-            { label: 'Éveils longs', value: '49 min', tag: 'Élevé', color: 'var(--bad)' },
-            { label: 'VFC', value: '82 ms', tag: 'Excellent', color: 'var(--good)' },
-            { label: 'FC repos', value: '49 bpm', tag: 'Top', color: 'var(--good)' },
+            { label: 'Durée', value: sleepHours, tag: sleepData?.sleep?.duree_totale_min >= 420 ? 'Bon' : 'Court', color: sleepData?.sleep?.duree_totale_min >= 420 ? 'var(--good)' : 'var(--warn)' },
+            { label: 'Profond', value: `${sleepData?.sleep?.profond_min ?? '—'} min`, tag: (sleepData?.sleep?.profond_min ?? 0) >= 80 ? 'Bon' : 'Juste', color: (sleepData?.sleep?.profond_min ?? 0) >= 80 ? 'var(--good)' : 'var(--warn)' },
+            { label: 'REM', value: `${sleepData?.sleep?.rem_min ?? '—'} min`, tag: (sleepData?.sleep?.rem_min ?? 0) >= 80 ? 'Bon' : 'Juste', color: (sleepData?.sleep?.rem_min ?? 0) >= 80 ? 'var(--good)' : 'var(--warn)' },
+            { label: 'Micro-réveils', value: `${sleepData?.sleep?.micro_reveils ?? '—'}`, tag: (sleepData?.sleep?.micro_reveils ?? 0) <= 10 ? 'Normal' : 'Agité', color: (sleepData?.sleep?.micro_reveils ?? 0) <= 10 ? 'var(--good)' : 'var(--warn)' },
+            { label: 'VFC', value: `${sleepData?.hrv ?? '—'} ms`, tag: (sleepData?.hrv ?? 0) >= 80 ? 'Excellent' : 'Bon', color: (sleepData?.hrv ?? 0) >= 80 ? 'var(--good)' : 'var(--warn)' },
+            { label: 'FC repos', value: `${sleepData?.fc ?? '—'} bpm`, tag: (parseInt(sleepData?.fc) ?? 60) <= 55 ? 'Top' : 'Bon', color: 'var(--good)' },
           ].map((row, i, arr) => (
             <div key={row.label} style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '10px 0',
-              borderBottom: i < arr.length - 1 ? '0.5px solid var(--border)' : 'none',
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '10px 0', borderBottom: i < arr.length - 1 ? '0.5px solid var(--border)' : 'none',
             }}>
               <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{row.label}</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-primary)' }}>{row.value}</span>
-                <span style={{
-                  fontSize: 9,
-                  padding: '2px 8px',
-                  borderRadius: 20,
-                  background: row.color + '22',
-                  color: row.color,
-                }}>{row.tag}</span>
+                <span style={{ fontSize: 9, padding: '2px 8px', borderRadius: 20, background: row.color + '22', color: row.color }}>{row.tag}</span>
               </div>
             </div>
           ))}
@@ -248,18 +255,10 @@ export default function Home() {
       {/* SHEET SPORT */}
       {activeSheet === 'sport' && (
         <div style={{
-          position: 'fixed',
-          bottom: 0,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          width: '100%',
-          maxWidth: 430,
-          background: 'var(--surface)',
-          borderRadius: '20px 20px 0 0',
-          padding: '14px 20px 40px',
-          zIndex: 101,
-          maxHeight: '85vh',
-          overflowY: 'auto',
+          position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
+          width: '100%', maxWidth: 430, background: 'var(--surface)',
+          borderRadius: '20px 20px 0 0', padding: '14px 20px 40px', zIndex: 101,
+          maxHeight: '85vh', overflowY: 'auto',
         }}>
           <div style={{ width: 32, height: 4, background: '#2a2a2a', borderRadius: 2, margin: '0 auto 16px' }} />
           <button onClick={closeSheet} style={{ position: 'absolute', top: 14, right: 20, color: 'var(--text-muted)', fontSize: 18 }}>✕</button>
@@ -313,13 +312,10 @@ export default function Home() {
           <div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
             {[4, 5, 6, 7, 8].map(n => (
               <button key={n} onClick={() => setEffortScore(n)} style={{
-                flex: 1,
-                padding: '8px 0',
+                flex: 1, padding: '8px 0',
                 background: n === effortScore ? 'var(--accent-dim)' : 'var(--surface-2)',
                 border: `0.5px solid ${n === effortScore ? 'var(--accent)' : 'var(--border)'}`,
-                borderRadius: 10,
-                fontSize: 14,
-                fontWeight: 500,
+                borderRadius: 10, fontSize: 14, fontWeight: 500,
                 color: n === effortScore ? 'var(--accent)' : 'var(--text-primary)',
               }}>{n}</button>
             ))}
@@ -327,9 +323,7 @@ export default function Home() {
           <button onClick={closeSheet} style={{
             width: '100%', padding: 12, background: 'var(--accent)',
             border: 'none', borderRadius: 10, color: '#fff', fontSize: 12, fontWeight: 500,
-          }}>
-            Enregistrer
-          </button>
+          }}>Enregistrer</button>
         </div>
       )}
 
@@ -342,13 +336,13 @@ export default function Home() {
         }}>
           <div style={{ width: 32, height: 4, background: '#2a2a2a', borderRadius: 2, margin: '0 auto 16px' }} />
           <button onClick={closeSheet} style={{ position: 'absolute', top: 14, right: 20, color: 'var(--text-muted)', fontSize: 18 }}>✕</button>
-          <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 16 }}>Météo · Blagnac</div>
+          <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 16 }}>Météo · {weatherData?.ville ?? 'Bordeaux'}</div>
           {[
-            { label: 'Température', value: '37°C', tag: 'Extrême', color: 'var(--bad)' },
-            { label: "Max aujourd'hui", value: '39.5°C', tag: null, color: null },
-            { label: 'Min ce soir', value: '21°C', tag: 'Sortie ok', color: 'var(--good)' },
-            { label: 'Humidité', value: '23%', tag: null, color: null },
-            { label: 'Impact sport', value: 'Pas de sortie avant 20h', tag: null, color: 'var(--bad)' },
+            { label: 'Température', value: `${weatherData?.temperature ?? '—'}°C`, tag: (weatherData?.temperature ?? 0) > 35 ? 'Extrême' : 'Ok', color: (weatherData?.temperature ?? 0) > 35 ? 'var(--bad)' : 'var(--good)' },
+            { label: "Max aujourd'hui", value: `${weatherData?.temp_max ?? '—'}°C`, tag: null, color: null },
+            { label: 'Min ce soir', value: `${weatherData?.temp_min ?? '—'}°C`, tag: 'Sortie ok', color: 'var(--good)' },
+            { label: 'Humidité', value: `${weatherData?.humidite ?? '—'}%`, tag: null, color: null },
+            { label: 'Vent', value: `${weatherData?.vent_kmh ?? '—'} km/h`, tag: null, color: null },
           ].map((row, i, arr) => (
             <div key={row.label} style={{
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -358,10 +352,7 @@ export default function Home() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ fontSize: 11, fontWeight: 500, color: row.color || 'var(--text-primary)' }}>{row.value}</span>
                 {row.tag && (
-                  <span style={{
-                    fontSize: 9, padding: '2px 8px', borderRadius: 20,
-                    background: (row.color || 'var(--good)') + '22', color: row.color || 'var(--good)',
-                  }}>{row.tag}</span>
+                  <span style={{ fontSize: 9, padding: '2px 8px', borderRadius: 20, background: (row.color || 'var(--good)') + '22', color: row.color || 'var(--good)' }}>{row.tag}</span>
                 )}
               </div>
             </div>
