@@ -3,8 +3,6 @@ import { NextResponse } from 'next/server'
 const GOOGLE_HEALTH_BASE = 'https://health.googleapis.com/v4/users/me'
 
 async function getGoogleHealthToken() {
-  // Le token OAuth est stocké dans les env vars Vercel
-  // On utilisera le refresh token pour obtenir un nouveau token
   const response = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -125,7 +123,6 @@ export async function GET() {
     const hrv = parseHRV(hrvData)
     const fc = parseRestingHR(hrData)
 
-    // Météo via IP approximative (Bordeaux par défaut)
     const lat = 44.8378
     const lon = -0.5792
     const weather = await getWeather(lat, lon)
