@@ -123,28 +123,30 @@ export default function Home() {
   }
 
   const saveMeal = async () => {
-    if (selectedFoods.length === 0) return
-    setSavingMeal(true)
-    try {
-      await fetch('/api/nutrition', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          meal_type: activeMeal,
-          aliments: selectedFoods.join(', '),
-          quantite: selectedQuantity,
-          heure: mealTime,
-          notes: null,
-        }),
-      })
-      setSelectedFoods([])
-      setSelectedQuantity('Normal')
-      setFoodCategory(null)
-    } catch (e) {
-      console.error(e)
-    }
-    setSavingMeal(false)
+  if (selectedFoods.length === 0 && !mealNotEaten) return
+  setSavingMeal(true)
+  try {
+    await fetch('/api/nutrition', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        meal_type: activeMeal,
+        aliments: mealNotEaten ? 'PAS_MANGE' : selectedFoods.join(', '),
+        quantite: mealNotEaten ? null : selectedQuantity,
+        heure: mealTime,
+        notes: mealNotEaten ? 'Repas sauté' : null,
+      }),
+    })
+    setSelectedFoods([])
+    setSelectedQuantity('Normal')
+    setMealNotEaten(false)
+    setFoodCategory(null)
+    closeSheet()
+  } catch (e) {
+    console.error(e)
   }
+  setSavingMeal(false)
+}
 
   return (
     <main style={{ paddingBottom: 80 }}>
@@ -413,9 +415,14 @@ export default function Home() {
                   </button>
                 ))}
               </div>
-              <button onClick={() => setMealNotEaten(!mealNotEaten)} style={{ width: '100%', padding: '9px 0', background: mealNotEaten ? '#1a0a00' : 'transparent', border: `0.5px solid ${mealNotEaten ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 10, fontSize: 11, color: mealNotEaten ? 'var(--accent)' : 'var(--text-muted)', marginBottom: 14 }}>
+              <button onClick={() => setMealNotEaten(!mealNotEaten)} style={{ width: '100%', padding: '9px 0', background: mealNotEaten ? '#1a0a00' : 'transparent', border: `0.5px solid ${mealNotEaten ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 10, fontSize: 11, color: mealNotEaten ? 'var(--accent)' : 'var(--text-muted)', marginBottom: 8 }}>
                 {mealNotEaten ? '✓ Pas mangé ce repas' : 'Pas mangé ce repas'}
               </button>
+              {mealNotEaten && (
+                <button onClick={saveMeal} style={{ width: '100%', padding: '9px 0', background: 'var(--accent)', border: 'none', borderRadius: 10, fontSize: 11, color: '#fff', marginBottom: 14 }}>
+                  {savingMeal ? 'Enregistrement...' : 'Confirmer'}
+                </button>
+              )}
               <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 6 }}>Resto ou recette ? Dis-le moi</div>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', background: 'var(--surface-2)', borderRadius: 20, padding: '8px 14px', border: '0.5px solid var(--border)' }}>
                 <span style={{ flex: 1, fontSize: 11, color: '#333' }}>Ex : pad thaï au resto ce soir...</span>
