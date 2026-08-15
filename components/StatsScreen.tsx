@@ -134,6 +134,7 @@ const SESSION_BG: Record<string, string> = {
 export default function StatsScreen() {
   const [period, setPeriod] = useState('7J')
   const [chartView, setChartView] = useState<'steps' | 'km'>('steps')
+  const [selectedBar, setSelectedBar] = useState<number | null>(null)
 
   const currentData = chartView === 'steps' ? STEPS_DATA[period] ?? [] : KM_DATA[period] ?? []
   const maxVal = Math.max(...currentData.map(d => d.value), 1)
@@ -156,7 +157,7 @@ export default function StatsScreen() {
       {/* Période */}
       <div style={{ display: 'flex', gap: 5, marginBottom: 20 }}>
         {PERIODS.map(p => (
-          <button key={p} onClick={() => setPeriod(p)} style={{
+          <button key={p} onClick={() => { setPeriod(p); setSelectedBar(null) }} style={{
             flex: 1, padding: '6px 0',
             background: p === period ? 'var(--accent-dim)' : 'var(--surface)',
             border: `0.5px solid ${p === period ? 'var(--accent)' : 'var(--border)'}`,
@@ -174,7 +175,7 @@ export default function StatsScreen() {
           </div>
           <div style={{ display: 'flex', gap: 4 }}>
             {(['steps', 'km'] as const).map(v => (
-              <button key={v} onClick={() => setChartView(v)} style={{
+              <button key={v} onClick={() => { setChartView(v); setSelectedBar(null) }} style={{
                 padding: '3px 10px',
                 background: chartView === v ? 'var(--accent-dim)' : 'transparent',
                 border: `0.5px solid ${chartView === v ? 'var(--accent)' : 'var(--border)'}`,
@@ -194,7 +195,7 @@ export default function StatsScreen() {
           justifyContent: currentData.length === 1 ? 'center' : 'stretch',
         }}>
           {currentData.map((d, i) => (
-            <div key={i} style={{
+            <div key={i} onClick={() => setSelectedBar(selectedBar === i ? null : i)} style={{
               flex: currentData.length === 1 ? 'none' : 1,
               width: currentData.length === 1 ? 40 : 'auto',
               display: 'flex',
@@ -203,14 +204,35 @@ export default function StatsScreen() {
               gap: 3,
               height: '100%',
               justifyContent: 'flex-end',
+              position: 'relative',
+              cursor: 'pointer',
             }}>
+              {selectedBar === i && d.value > 0 && (
+                <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  background: 'var(--accent)',
+                  color: '#fff',
+                  fontSize: 8,
+                  padding: '2px 6px',
+                  borderRadius: 6,
+                  whiteSpace: 'nowrap',
+                  zIndex: 10,
+                }}>
+                  {chartView === 'steps' ? d.value.toLocaleString('fr-FR') : `${d.value} km`}
+                </div>
+              )}
               <div style={{
-                width: '100%', borderRadius: '3px 3px 0 0',
+                width: '100%',
+                borderRadius: '3px 3px 0 0',
                 height: `${Math.max((d.value / maxVal) * 60, d.value > 0 ? 3 : 0)}px`,
-                background: d.active ? 'var(--accent)' : d.value === 0 ? 'var(--border)' : 'var(--surface)',
-                border: `0.5px solid ${d.active ? 'var(--accent)' : 'var(--border)'}`,
+                background: selectedBar === i ? 'var(--accent)' : d.active ? 'var(--accent)' : d.value === 0 ? 'var(--border)' : 'var(--surface)',
+                border: `0.5px solid ${selectedBar === i || d.active ? 'var(--accent)' : 'var(--border)'}`,
+                transition: 'background 0.15s',
               }} />
-              <div style={{ fontSize: 8, color: d.active ? 'var(--accent)' : 'var(--text-muted)' }}>{d.day}</div>
+              <div style={{ fontSize: 8, color: selectedBar === i || d.active ? 'var(--accent)' : 'var(--text-muted)' }}>{d.day}</div>
             </div>
           ))}
         </div>

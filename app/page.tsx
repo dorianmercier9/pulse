@@ -54,7 +54,12 @@ export default function Home() {
             </button>
           </div>
 
-          <ScoreRing score={76} label="Récupération" tag="Bon · entraîne-toi normalement" />
+          <ScoreRing 
+            score={76} 
+            label="Récupération" 
+            tag="Bon · entraîne-toi normalement"
+            date="14 août"
+          />
 
           <SleepStrip stages={SLEEP_STAGES} />
 

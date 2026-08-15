@@ -2,9 +2,10 @@ interface ScoreRingProps {
   score: number
   label: string
   tag: string
+  date?: string
 }
 
-export default function ScoreRing({ score, label, tag }: ScoreRingProps) {
+export default function ScoreRing({ score, label, tag, date }: ScoreRingProps) {
   return (
     <div style={{ textAlign: 'center', padding: '20px 0 16px' }}>
       <div style={{
@@ -36,6 +37,15 @@ export default function ScoreRing({ score, label, tag }: ScoreRingProps) {
       }}>
         {tag}
       </div>
+      {date && (
+        <div style={{
+          fontSize: 9,
+          color: 'var(--text-muted)',
+          marginTop: 8,
+        }}>
+          Nuit du {date}
+        </div>
+      )}
     </div>
   )
 }
