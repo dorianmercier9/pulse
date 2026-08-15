@@ -23,6 +23,8 @@ export default function Home() {
   const [activeMeal, setActiveMeal] = useState('Matin')
   const [foodCategory, setFoodCategory] = useState<string | null>(null)
   const [effortScore, setEffortScore] = useState(6)
+  const [mealNotEaten, setMealNotEaten] = useState(false)
+  const [mealTime, setMealTime] = useState('07:00')
   const [activeTab, setActiveTab] = useState('accueil')
   const [activeSheet, setActiveSheet] = useState<string | null>(null)
 
@@ -435,9 +437,16 @@ export default function Home() {
         <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 20 }}>Qu'est-ce que tu as mangé ?</div>
 
         {/* Repas tabs */}
-<div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
+<div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
   {['Matin', 'Midi', 'Soir', 'Snack'].map(m => (
-    <button key={m} onClick={() => setActiveMeal(m)} style={{
+    <button key={m} onClick={() => {
+      setActiveMeal(m)
+      setMealNotEaten(false)
+      const defaultTimes: Record<string, string> = {
+        'Matin': '07:00', 'Midi': '12:00', 'Soir': '19:00', 'Snack': '16:00',
+      }
+      setMealTime(defaultTimes[m])
+    }} style={{
       flex: 1,
       padding: '7px 0',
       background: m === activeMeal ? 'var(--accent-dim)' : 'var(--surface-2)',
@@ -447,6 +456,23 @@ export default function Home() {
       color: m === activeMeal ? 'var(--accent)' : 'var(--text-muted)',
     }}>{m}</button>
   ))}
+</div>
+<div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+  <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>Heure</span>
+  <input
+    type="time"
+    value={mealTime}
+    onChange={e => setMealTime(e.target.value)}
+    style={{
+      background: 'var(--surface-2)',
+      border: '0.5px solid var(--border)',
+      borderRadius: 8,
+      padding: '6px 10px',
+      fontSize: 12,
+      color: 'var(--text-primary)',
+      outline: 'none',
+    }}
+  />
 </div>
 
         {/* Catégories */}
@@ -473,17 +499,19 @@ export default function Home() {
           ))}
         </div>
 
-        <button style={{
-          width: '100%',
-          padding: '9px 0',
-          background: 'transparent',
-          border: '0.5px solid var(--border)',
-          borderRadius: 10,
-          fontSize: 11,
-          color: 'var(--text-muted)',
-          marginBottom: 14,
-        }}>
-          Pas mangé ce repas
+        <button 
+          onClick={() => setMealNotEaten(!mealNotEaten)}
+          style={{
+            width: '100%',
+            padding: '9px 0',
+            background: mealNotEaten ? '#1a0a00' : 'transparent',
+            border: `0.5px solid ${mealNotEaten ? 'var(--accent)' : 'var(--border)'}`,
+            borderRadius: 10,
+            fontSize: 11,
+            color: mealNotEaten ? 'var(--accent)' : 'var(--text-muted)',
+            marginBottom: 14,
+          }}>
+          {mealNotEaten ? '✓ Pas mangé ce repas' : 'Pas mangé ce repas'}
         </button>
 
         {/* Mini chat */}
