@@ -33,20 +33,32 @@ export default function ChatScreen() {
   }, [messages])
 
   const sendMessage = async (text: string) => {
-    if (!text.trim()) return
-    const userMsg: Message = { role: 'user', text }
-    setMessages(prev => [...prev, userMsg])
-    setInput('')
-    setLoading(true)
+  if (!text.trim()) return
+  const userMsg: Message = { role: 'user', text }
+  const newMessages = [...messages, userMsg]
+  setMessages(newMessages)
+  setInput('')
+  setLoading(true)
 
-    setTimeout(() => {
-      setMessages(prev => [...prev, {
-        role: 'agent',
-        text: 'Je traite ta demande... (connexion au backend bientôt disponible)',
-      }])
-      setLoading(false)
-    }, 800)
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: text,
+        history: newMessages.slice(0, -1).map(m => ({
+          role: m.role === 'agent' ? 'assistant' : 'user',
+          content: m.text,
+        })),
+      }),
+    })
+    const data = await res.json()
+    setMessages(prev => [...prev, { role: 'agent', text: data.response ?? 'Erreur.' }])
+  } catch {
+    setMessages(prev => [...prev, { role: 'agent', text: 'Erreur de connexion.' }])
   }
+  setLoading(false)
+}
 
   return (
     <div style={{
