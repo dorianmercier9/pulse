@@ -141,7 +141,7 @@ export default function Home() {
     setSelectedQuantity('Normal')
     setMealNotEaten(false)
     setFoodCategory(null)
-    closeSheet()
+    // PAS de closeSheet() ici
   } catch (e) {
     console.error(e)
   }
