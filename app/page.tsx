@@ -76,6 +76,7 @@ export default function Home() {
   const [selectedFoods, setSelectedFoods] = useState<string[]>([])
   const [selectedQuantity, setSelectedQuantity] = useState('Normal')
   const [savingMeal, setSavingMeal] = useState(false)
+  const [todayMeals, setTodayMeals] = useState<any[]>([])
 
   const openSheet = (name: string) => setActiveSheet(name)
   const closeSheet = () => setActiveSheet(null)
@@ -93,6 +94,10 @@ export default function Home() {
         ])
         setSleepData(sleep)
         setWeatherData(weather)
+        const nutritionRes = await fetch('/api/nutrition')
+        const meals = await nutritionRes.json()
+        setTodayMeals(Array.isArray(meals) ? meals : [])
+
       } catch (e) {
         console.error('Erreur chargement données', e)
       }
@@ -386,6 +391,20 @@ export default function Home() {
             <>
               <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 4 }}>Alimentation</div>
               <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 20 }}>Qu'est-ce que tu as mangé ?</div>
+              {todayMeals.length > 0 && (
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Aujourd'hui</div>
+                  {todayMeals.map((meal: any, i: number) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: i < todayMeals.length - 1 ? '0.5px solid var(--border)' : 'none' }}>
+                      <div>
+                        <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginRight: 8 }}>{meal.meal_type}</span>
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{meal.aliments === 'PAS_MANGE' ? 'Pas mangé' : meal.aliments}</span>
+                      </div>
+                      <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{meal.heure}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
                 {['Matin', 'Midi', 'Soir', 'Snack'].map(m => (
                   <button key={m} onClick={() => {
