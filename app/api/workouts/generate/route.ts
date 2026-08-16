@@ -8,7 +8,7 @@ export async function POST() {
     // Récupère l'historique des 7 derniers jours
     const history = await sql`
       SELECT * FROM workouts 
-      WHERE date >= CURRENT_DATE - INTERVAL '7 days'
+      WHERE date >= (CURRENT_DATE - INTERVAL '7 days')::text
       ORDER BY date DESC
     `
 

@@ -24,7 +24,7 @@ export async function GET() {
     await initTable()
     const rows = await sql`
       SELECT * FROM workouts 
-      WHERE date >= CURRENT_DATE - INTERVAL '7 days'
+      WHERE date >= (CURRENT_DATE - INTERVAL '7 days')::text
       ORDER BY date DESC, created_at DESC
     `
     return NextResponse.json(rows)
