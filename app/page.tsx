@@ -19,53 +19,11 @@ const SLEEP_STAGES = [
   { type: 'light' as const, flex: 3 },
 ]
 
-const FOOD_ITEMS: Record<string, { emoji: string; name: string }[]> = {
-  proteins: [
-    { emoji: '🍗', name: 'Poulet' }, { emoji: '🥚', name: 'Oeuf' },
-    { emoji: '🐟', name: 'Thon' }, { emoji: '🥩', name: 'Boeuf' },
-    { emoji: '🍣', name: 'Saumon' }, { emoji: '🐷', name: 'Porc' },
-    { emoji: '🫘', name: 'Légumineuses' }, { emoji: '🦐', name: 'Crevettes' },
-  ],
-  carbs: [
-    { emoji: '🍚', name: 'Riz' }, { emoji: '🍝', name: 'Pâtes' },
-    { emoji: '🥔', name: 'Pomme de terre' }, { emoji: '🍞', name: 'Pain' },
-    { emoji: '🌽', name: 'Maïs' }, { emoji: '🥣', name: 'Flocons avoine' },
-    { emoji: '🫓', name: 'Tortilla' }, { emoji: '🍠', name: 'Patate douce' },
-  ],
-  veggies: [
-    { emoji: '🥦', name: 'Brocoli' }, { emoji: '🥕', name: 'Carotte' },
-    { emoji: '🥗', name: 'Salade' }, { emoji: '🍅', name: 'Tomate' },
-    { emoji: '🫑', name: 'Poivron' }, { emoji: '🧅', name: 'Oignon' },
-    { emoji: '🥒', name: 'Concombre' }, { emoji: '🍆', name: 'Aubergine' },
-  ],
-  fruits: [
-    { emoji: '🍌', name: 'Banane' }, { emoji: '🍎', name: 'Pomme' },
-    { emoji: '🍊', name: 'Orange' }, { emoji: '🍇', name: 'Raisin' },
-    { emoji: '🥝', name: 'Kiwi' }, { emoji: '🍓', name: 'Fraise' },
-    { emoji: '🍍', name: 'Ananas' }, { emoji: '🍉', name: 'Pastèque' },
-  ],
-  dairy: [
-    { emoji: '🧀', name: 'Fromage' }, { emoji: '🥛', name: 'Lait' },
-    { emoji: '🍦', name: 'Yaourt' }, { emoji: '🧈', name: 'Beurre' },
-  ],
-  extras: [
-    { emoji: '🍫', name: 'Chocolat' }, { emoji: '🥜', name: 'Noix' },
-    { emoji: '🍕', name: 'Pizza' }, { emoji: '🍔', name: 'Burger' },
-    { emoji: '🍷', name: 'Vin' }, { emoji: '🍺', name: 'Bière' },
-  ],
-}
-
-const CATEGORY_LABELS: Record<string, string> = {
-  proteins: 'Protéines', carbs: 'Féculents', veggies: 'Légumes',
-  fruits: 'Fruits', dairy: 'Laitier', extras: 'Extras',
-}
-
 export default function Home() {
   const [activeMeal, setActiveMeal] = useState('Matin')
-  const [foodCategory, setFoodCategory] = useState<string | null>(null)
-  const [effortScore, setEffortScore] = useState(6)
   const [mealNotEaten, setMealNotEaten] = useState(false)
   const [mealTime, setMealTime] = useState('07:00')
+  const [effortScore, setEffortScore] = useState(6)
   const [activeTab, setActiveTab] = useState('accueil')
   const [activeSheet, setActiveSheet] = useState<string | null>(null)
   const [brief, setBrief] = useState<string | null>(null)
@@ -73,15 +31,21 @@ export default function Home() {
   const [sleepData, setSleepData] = useState<any>(null)
   const [weatherData, setWeatherData] = useState<any>(null)
   const [dataLoading, setDataLoading] = useState(true)
-  const [selectedFoods, setSelectedFoods] = useState<string[]>([])
-  const [selectedQuantity, setSelectedQuantity] = useState('Normal')
-  const [savingMeal, setSavingMeal] = useState(false)
   const [todayMeals, setTodayMeals] = useState<any[]>([])
   const [foodChatInput, setFoodChatInput] = useState('')
   const [foodChatLoading, setFoodChatLoading] = useState(false)
+  const [foodBrief, setFoodBrief] = useState<string | null>(null)
+  const [foodBriefLoading, setFoodBriefLoading] = useState(false)
+  const [savingMeal, setSavingMeal] = useState(false)
 
   const openSheet = (name: string) => setActiveSheet(name)
   const closeSheet = () => setActiveSheet(null)
+
+  const refreshMeals = async () => {
+    const res = await fetch('/api/nutrition')
+    const meals = await res.json()
+    setTodayMeals(Array.isArray(meals) ? meals : [])
+  }
 
   useEffect(() => {
     async function loadData() {
@@ -122,40 +86,6 @@ export default function Home() {
     ? weatherData.temp_max > 30 ? '☀️' : weatherData.precipitation_mm > 0 ? '🌧️' : '⛅'
     : '🌤️'
 
-  const toggleFood = (name: string) => {
-    setSelectedFoods(prev =>
-      prev.includes(name) ? prev.filter(f => f !== name) : [...prev, name]
-    )
-  }
-
-  const saveMeal = async () => {
-    if (selectedFoods.length === 0 && !mealNotEaten) return
-    setSavingMeal(true)
-    try {
-      await fetch('/api/nutrition', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          meal_type: activeMeal,
-          aliments: mealNotEaten ? 'PAS_MANGE' : selectedFoods.join(', '),
-          quantite: mealNotEaten ? null : selectedQuantity,
-          heure: mealTime,
-          notes: mealNotEaten ? 'Repas sauté' : null,
-        }),
-      })
-      const nutritionRes = await fetch('/api/nutrition')
-      const meals = await nutritionRes.json()
-      setTodayMeals(Array.isArray(meals) ? meals : [])
-      setSelectedFoods([])
-      setSelectedQuantity('Normal')
-      setMealNotEaten(false)
-      setFoodCategory(null)
-    } catch (e) {
-      console.error(e)
-    }
-    setSavingMeal(false)
-  }
-
   const sendFoodChat = async () => {
     if (!foodChatInput.trim()) return
     setFoodChatLoading(true)
@@ -168,14 +98,37 @@ export default function Home() {
       const data = await res.json()
       if (data.success) {
         setFoodChatInput('')
-        const nutritionRes = await fetch('/api/nutrition')
-        const meals = await nutritionRes.json()
-        setTodayMeals(Array.isArray(meals) ? meals : [])
+        setFoodBrief(null)
+        await refreshMeals()
       }
     } catch (e) {
       console.error(e)
     }
     setFoodChatLoading(false)
+  }
+
+  const saveMeal = async () => {
+    if (!mealNotEaten) return
+    setSavingMeal(true)
+    try {
+      await fetch('/api/nutrition', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          meal_type: activeMeal,
+          aliments: 'PAS_MANGE',
+          quantite: null,
+          heure: mealTime,
+          notes: 'Repas sauté',
+        }),
+      })
+      setMealNotEaten(false)
+      setFoodBrief(null)
+      await refreshMeals()
+    } catch (e) {
+      console.error(e)
+    }
+    setSavingMeal(false)
   }
 
   return (
@@ -405,104 +358,88 @@ export default function Home() {
       {activeSheet === 'food' && (
         <div style={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 430, background: 'var(--surface)', borderRadius: '20px 20px 0 0', padding: '14px 20px 40px', zIndex: 101, maxHeight: '85vh', overflowY: 'auto' }}>
           <div style={{ width: 32, height: 4, background: '#2a2a2a', borderRadius: 2, margin: '0 auto 16px' }} />
-          <button onClick={() => { closeSheet(); setFoodCategory(null); setSelectedFoods([]) }} style={{ position: 'absolute', top: 14, right: 20, color: 'var(--text-muted)', fontSize: 18 }}>✕</button>
+          <button onClick={closeSheet} style={{ position: 'absolute', top: 14, right: 20, color: 'var(--text-muted)', fontSize: 18 }}>✕</button>
 
-          {!foodCategory ? (
-            <>
-              <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 4 }}>Alimentation</div>
-              <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 12 }}>Qu'est-ce que tu as mangé ?</div>
+          <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 4 }}>Alimentation</div>
+          <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 12 }}>Dis-moi ce que tu as mangé</div>
 
-              {todayMeals.length > 0 && (
-                <div style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Aujourd'hui</div>
-                  {todayMeals.map((meal: any, i: number) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: i < todayMeals.length - 1 ? '0.5px solid var(--border)' : 'none' }}>
-                      <div>
-                        <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginRight: 8 }}>{meal.meal_type}</span>
-                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{meal.aliments === 'PAS_MANGE' ? 'Pas mangé' : meal.aliments}</span>
-                      </div>
-                      <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{meal.heure}</span>
-                    </div>
-                  ))}
+          {/* Mini chat */}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', background: 'var(--surface-2)', borderRadius: 20, padding: '8px 14px', border: '0.5px solid var(--border)', marginBottom: 16 }}>
+            <input
+              value={foodChatInput}
+              onChange={e => setFoodChatInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && sendFoodChat()}
+              placeholder="poulet riz brocolis à midi..."
+              style={{ flex: 1, fontSize: 11, color: 'var(--text-primary)', background: 'transparent', border: 'none', outline: 'none' }}
+            />
+            <button onClick={sendFoodChat} style={{ width: 22, height: 22, background: foodChatLoading ? 'var(--text-muted)' : 'var(--accent)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: '#fff', border: 'none', cursor: 'pointer' }}>
+              {foodChatLoading ? '...' : '↑'}
+            </button>
+          </div>
+
+          {/* Repas du jour */}
+          {todayMeals.length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Aujourd'hui</div>
+              {todayMeals.map((meal: any, i: number) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: i < todayMeals.length - 1 ? '0.5px solid var(--border)' : 'none' }}>
+                  <div>
+                    <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginRight: 8 }}>{meal.meal_type}</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{meal.aliments === 'PAS_MANGE' ? 'Pas mangé' : meal.aliments}</span>
+                  </div>
+                  <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{meal.heure}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Brief alimentation */}
+          {todayMeals.length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <button
+                onClick={async () => {
+                  setFoodBriefLoading(true)
+                  try {
+                    const res = await fetch('/api/nutrition?brief=true')
+                    const data = await res.json()
+                    setFoodBrief(data.observation ?? null)
+                  } catch (e) { console.error(e) }
+                  setFoodBriefLoading(false)
+                }}
+                style={{ width: '100%', padding: '9px 0', background: 'transparent', border: '0.5px solid var(--border)', borderRadius: 10, fontSize: 11, color: 'var(--text-muted)', marginBottom: 10 }}
+              >
+                {foodBriefLoading ? 'Analyse...' : 'Analyse Pulse'}
+              </button>
+              {foodBrief && (
+                <div style={{ background: 'var(--surface-2)', borderLeft: '2px solid var(--accent)', borderRadius: '0 10px 10px 0', padding: '10px 12px' }}>
+                  <div style={{ fontSize: 9, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 5 }}>Pulse · alimentation</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.6 }}>{foodBrief}</div>
                 </div>
               )}
-
-              {/* Mini chat */}
-              <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 6 }}>Dis-le moi en une phrase</div>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center', background: 'var(--surface-2)', borderRadius: 20, padding: '8px 14px', border: '0.5px solid var(--border)', marginBottom: 16 }}>
-                <input
-                  value={foodChatInput}
-                  onChange={e => setFoodChatInput(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && sendFoodChat()}
-                  placeholder="Ex : poulet riz brocolis à midi..."
-                  style={{ flex: 1, fontSize: 11, color: 'var(--text-primary)', background: 'transparent', border: 'none', outline: 'none' }}
-                />
-                <button onClick={sendFoodChat} style={{ width: 22, height: 22, background: foodChatLoading ? 'var(--text-muted)' : 'var(--accent)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: '#fff', border: 'none', cursor: 'pointer' }}>
-                  {foodChatLoading ? '...' : '↑'}
-                </button>
-              </div>
-
-              <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
-                {['Matin', 'Midi', 'Soir', 'Snack'].map(m => (
-                  <button key={m} onClick={() => {
-                    setActiveMeal(m)
-                    setMealNotEaten(false)
-                    const defaultTimes: Record<string, string> = { 'Matin': '07:00', 'Midi': '12:00', 'Soir': '19:00', 'Snack': '16:00' }
-                    setMealTime(defaultTimes[m])
-                  }} style={{ flex: 1, padding: '7px 0', background: m === activeMeal ? 'var(--accent-dim)' : 'var(--surface-2)', border: `0.5px solid ${m === activeMeal ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 8, fontSize: 10, color: m === activeMeal ? 'var(--accent)' : 'var(--text-muted)' }}>{m}</button>
-                ))}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-                <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>Heure</span>
-                <input type="time" value={mealTime} onChange={e => setMealTime(e.target.value)} style={{ background: 'var(--surface-2)', border: '0.5px solid var(--border)', borderRadius: 8, padding: '6px 10px', fontSize: 12, color: 'var(--text-primary)', outline: 'none' }} />
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
-                {[
-                  { key: 'proteins', emoji: '🥩', label: 'Protéines' },
-                  { key: 'carbs', emoji: '🌾', label: 'Féculents' },
-                  { key: 'veggies', emoji: '🥦', label: 'Légumes' },
-                  { key: 'fruits', emoji: '🍎', label: 'Fruits' },
-                  { key: 'dairy', emoji: '🧀', label: 'Laitier' },
-                  { key: 'extras', emoji: '🍫', label: 'Extras' },
-                ].map(cat => (
-                  <button key={cat.key} onClick={() => setFoodCategory(cat.key)} style={{ background: 'var(--surface-2)', border: '0.5px solid var(--border)', borderRadius: 12, padding: '14px 10px', textAlign: 'center', cursor: 'pointer' }}>
-                    <div style={{ fontSize: 26, marginBottom: 6 }}>{cat.emoji}</div>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{cat.label}</div>
-                  </button>
-                ))}
-              </div>
-              <button onClick={() => setMealNotEaten(!mealNotEaten)} style={{ width: '100%', padding: '9px 0', background: mealNotEaten ? '#1a0a00' : 'transparent', border: `0.5px solid ${mealNotEaten ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 10, fontSize: 11, color: mealNotEaten ? 'var(--accent)' : 'var(--text-muted)', marginBottom: 8 }}>
-                {mealNotEaten ? '✓ Pas mangé ce repas' : 'Pas mangé ce repas'}
-              </button>
-              {mealNotEaten && (
-                <button onClick={saveMeal} style={{ width: '100%', padding: '9px 0', background: 'var(--accent)', border: 'none', borderRadius: 10, fontSize: 11, color: '#fff', marginBottom: 14 }}>
-                  {savingMeal ? 'Enregistrement...' : 'Confirmer'}
-                </button>
-              )}
-            </>
-          ) : (
-            <>
-              <button onClick={() => { setFoodCategory(null); setSelectedFoods([]) }} style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 14, display: 'block', background: 'none', border: 'none', cursor: 'pointer' }}>← Catégories</button>
-              <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 16 }}>{CATEGORY_LABELS[foodCategory]}</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 20 }}>
-                {FOOD_ITEMS[foodCategory]?.map(food => (
-                  <button key={food.name} onClick={() => toggleFood(food.name)} style={{ background: selectedFoods.includes(food.name) ? 'var(--accent-dim)' : 'var(--surface-2)', border: `0.5px solid ${selectedFoods.includes(food.name) ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 10, padding: '10px 6px', textAlign: 'center', cursor: 'pointer' }}>
-                    <div style={{ fontSize: 24, marginBottom: 4 }}>{food.emoji}</div>
-                    <div style={{ fontSize: 9, color: selectedFoods.includes(food.name) ? 'var(--accent)' : 'var(--text-muted)' }}>{food.name}</div>
-                  </button>
-                ))}
-              </div>
-              <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Quantité</div>
-              <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-                {['Petit', 'Normal', 'Grand'].map(q => (
-                  <button key={q} onClick={() => setSelectedQuantity(q)} style={{ flex: 1, padding: '9px 0', background: q === selectedQuantity ? 'var(--accent-dim)' : 'var(--surface-2)', border: `0.5px solid ${q === selectedQuantity ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 10, fontSize: 11, color: q === selectedQuantity ? 'var(--accent)' : 'var(--text-muted)' }}>{q}</button>
-                ))}
-              </div>
-              <button onClick={saveMeal} style={{ width: '100%', padding: 12, background: selectedFoods.length > 0 ? 'var(--accent)' : 'var(--surface-2)', border: 'none', borderRadius: 10, color: selectedFoods.length > 0 ? '#fff' : 'var(--text-muted)', fontSize: 12, fontWeight: 500 }}>
-                {savingMeal ? 'Enregistrement...' : selectedFoods.length > 0 ? `Ajouter (${selectedFoods.length})` : 'Sélectionne des aliments'}
-              </button>
-            </>
+            </div>
           )}
+
+          {/* Pas mangé */}
+          <div style={{ marginTop: 8 }}>
+            <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 8 }}>Ou indique un repas sauté :</div>
+            <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+              {['Matin', 'Midi', 'Soir', 'Snack'].map(m => (
+                <button key={m} onClick={() => {
+                  setActiveMeal(m)
+                  const defaultTimes: Record<string, string> = { 'Matin': '07:00', 'Midi': '12:00', 'Soir': '19:00', 'Snack': '16:00' }
+                  setMealTime(defaultTimes[m])
+                }} style={{ flex: 1, padding: '6px 0', background: m === activeMeal ? 'var(--accent-dim)' : 'var(--surface-2)', border: `0.5px solid ${m === activeMeal ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 8, fontSize: 10, color: m === activeMeal ? 'var(--accent)' : 'var(--text-muted)' }}>{m}</button>
+              ))}
+            </div>
+            <button onClick={() => setMealNotEaten(!mealNotEaten)} style={{ width: '100%', padding: '9px 0', background: mealNotEaten ? '#1a0a00' : 'transparent', border: `0.5px solid ${mealNotEaten ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 10, fontSize: 11, color: mealNotEaten ? 'var(--accent)' : 'var(--text-muted)', marginBottom: 8 }}>
+              {mealNotEaten ? '✓ Pas mangé ce repas' : 'Pas mangé ce repas'}
+            </button>
+            {mealNotEaten && (
+              <button onClick={saveMeal} style={{ width: '100%', padding: '9px 0', background: 'var(--accent)', border: 'none', borderRadius: 10, fontSize: 11, color: '#fff' }}>
+                {savingMeal ? 'Enregistrement...' : 'Confirmer'}
+              </button>
+            )}
+          </div>
         </div>
       )}
 
