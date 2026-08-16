@@ -9,15 +9,13 @@ import BottomNav from '@/components/BottomNav'
 import ChatScreen from '@/components/ChatScreen'
 import StatsScreen from '@/components/StatsScreen'
 
-function buildSleepStages(sleep: any) {
+function buildSleepStages(sleep: any): { type: 'deep' | 'light' | 'rem' | 'awake'; flex: number }[] {
   if (!sleep) return [
-    { type: 'deep' as const, flex: 2 },
-    { type: 'light' as const, flex: 5 },
-    { type: 'rem' as const, flex: 2 },
-    { type: 'light' as const, flex: 4 },
-    { type: 'deep' as const, flex: 1 },
-    { type: 'awake' as const, flex: 1 },
-    { type: 'light' as const, flex: 3 },
+    { type: 'deep', flex: 2 },
+    { type: 'light', flex: 5 },
+    { type: 'rem', flex: 2 },
+    { type: 'light', flex: 4 },
+    { type: 'awake', flex: 1 },
   ]
   const deep = sleep.profond_min ?? 0
   const rem = sleep.rem_min ?? 0
@@ -25,11 +23,11 @@ function buildSleepStages(sleep: any) {
   const awake = sleep.micro_reveils ?? 0
   const total = deep + rem + light + Math.max(awake, 1)
   return [
-    { type: 'deep' as const, flex: Math.max(1, Math.round(deep / total * 10)) },
-    { type: 'light' as const, flex: Math.max(1, Math.round(light / total * 10 * 0.4)) },
-    { type: 'rem' as const, flex: Math.max(1, Math.round(rem / total * 10)) },
-    { type: 'light' as const, flex: Math.max(1, Math.round(light / total * 10 * 0.6)) },
-    { type: 'awake' as const, flex: Math.max(1, Math.round(awake / 5)) },
+    { type: 'deep', flex: Math.max(1, Math.round(deep / total * 10)) },
+    { type: 'light', flex: Math.max(1, Math.round(light / total * 10 * 0.4)) },
+    { type: 'rem', flex: Math.max(1, Math.round(rem / total * 10)) },
+    { type: 'light', flex: Math.max(1, Math.round(light / total * 10 * 0.6)) },
+    { type: 'awake', flex: Math.max(1, Math.round(awake / 5)) },
   ]
 }
 
@@ -180,7 +178,7 @@ export default function Home() {
               : '—'}
           />
 
-          <SleepStrip stages={buildSleepStages(sleepData?.sleep)}
+          <SleepStrip stages={buildSleepStages(sleepData?.sleep)} />
 
           <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 8 }}>
             <SectionCard
@@ -377,7 +375,6 @@ export default function Home() {
           <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 4 }}>Alimentation</div>
           <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 12 }}>Dis-moi ce que tu as mangé</div>
 
-          {/* Mini chat */}
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', background: 'var(--surface-2)', borderRadius: 20, padding: '8px 14px', border: '0.5px solid var(--border)', marginBottom: 16 }}>
             <input
               value={foodChatInput}
@@ -391,7 +388,6 @@ export default function Home() {
             </button>
           </div>
 
-          {/* Repas du jour */}
           {todayMeals.length > 0 && (
             <div style={{ marginBottom: 16 }}>
               <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Aujourd'hui</div>
@@ -407,7 +403,6 @@ export default function Home() {
             </div>
           )}
 
-          {/* Brief alimentation */}
           {todayMeals.length > 0 && (
             <div style={{ marginBottom: 16 }}>
               <button
@@ -433,7 +428,6 @@ export default function Home() {
             </div>
           )}
 
-          {/* Pas mangé */}
           <div style={{ marginTop: 8 }}>
             <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 8 }}>Ou indique un repas sauté :</div>
             <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
