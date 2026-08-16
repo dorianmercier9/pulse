@@ -158,12 +158,12 @@ export default function Home() {
           </div>
 
           <ScoreRing
-            score={76}
+            score={sleepData?.score ?? 76}
             label="Récupération"
-            tag="Bon · entraîne-toi normalement"
+            tag={sleepData?.scoreTag ?? 'Chargement...'}
             date={sleepData?.date
               ? new Date(sleepData.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
-              : '15 août'}
+              : '—'}
           />
 
           <SleepStrip stages={SLEEP_STAGES} />
