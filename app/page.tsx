@@ -49,6 +49,7 @@ export default function Home() {
   const [foodBrief, setFoodBrief] = useState<string | null>(null)
   const [foodBriefLoading, setFoodBriefLoading] = useState(false)
   const [savingMeal, setSavingMeal] = useState(false)
+  const [calendarEvents, setCalendarEvents] = useState<any[]>([])
 
   const openSheet = (name: string) => setActiveSheet(name)
   const closeSheet = () => setActiveSheet(null)
@@ -62,19 +63,22 @@ export default function Home() {
   useEffect(() => {
     async function loadData() {
       try {
-        const [sleepRes, weatherRes, nutritionRes] = await Promise.all([
+        const [sleepRes, weatherRes, nutritionRes, calendarRes] = await Promise.all([
           fetch('/api/sleep'),
           fetch('/api/weather'),
           fetch('/api/nutrition'),
+          fetch('/api/calendar'),
         ])
-        const [sleep, weather, meals] = await Promise.all([
+        const [sleep, weather, meals, events] = await Promise.all([
           sleepRes.json(),
           weatherRes.json(),
           nutritionRes.json(),
+          calendarRes.json(),
         ])
         setSleepData(sleep)
         setWeatherData(weather)
         setTodayMeals(Array.isArray(meals) ? meals : [])
+        setCalendarEvents(Array.isArray(events) ? events : [])
       } catch (e) {
         console.error('Erreur chargement données', e)
       }
@@ -97,6 +101,10 @@ export default function Home() {
   const weatherIcon = weatherData
     ? weatherData.temp_max > 30 ? '☀️' : weatherData.precipitation_mm > 0 ? '🌧️' : '⛅'
     : '🌤️'
+
+  const agendaSubtitle = calendarEvents.length > 0
+    ? `${calendarEvents.length} événement${calendarEvents.length > 1 ? 's' : ''} à venir`
+    : 'Aucun événement prévu'
 
   const sendFoodChat = async () => {
     if (!foodChatInput.trim()) return
@@ -210,7 +218,7 @@ export default function Home() {
               icon="📅"
               iconBg="#080f1a"
               title="Agenda"
-              subtitle="Rendu mémoire dans 7 jours"
+              subtitle={agendaSubtitle}
               onClick={() => openSheet('agenda')}
             />
             <SectionCard
@@ -355,14 +363,16 @@ export default function Home() {
           <div style={{ width: 32, height: 4, background: '#2a2a2a', borderRadius: 2, margin: '0 auto 16px' }} />
           <button onClick={closeSheet} style={{ position: 'absolute', top: 14, right: 20, color: 'var(--text-muted)', fontSize: 18 }}>✕</button>
           <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 16 }}>Agenda · 14 jours</div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '0.5px solid var(--border)' }}>
-            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>21 août</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-primary)' }}>Rendu mémoire</span>
-              <span style={{ fontSize: 9, padding: '2px 8px', borderRadius: 20, background: 'var(--warn)22', color: 'var(--warn)' }}>7 jours</span>
+          {calendarEvents.length > 0 ? calendarEvents.map((event: any, i: number) => (
+            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: i < calendarEvents.length - 1 ? '0.5px solid var(--border)' : 'none' }}>
+              <span style={{ fontSize: 11, color: 'var(--text-primary)' }}>{event.titre}</span>
+              <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                {new Date(event.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+              </span>
             </div>
-          </div>
-          <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 14 }}>Aucun autre événement prévu</div>
+          )) : (
+            <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>Aucun événement dans les 14 prochains jours</div>
+          )}
         </div>
       )}
 
