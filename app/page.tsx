@@ -77,6 +77,8 @@ export default function Home() {
   const [selectedQuantity, setSelectedQuantity] = useState('Normal')
   const [savingMeal, setSavingMeal] = useState(false)
   const [todayMeals, setTodayMeals] = useState<any[]>([])
+  const [foodChatInput, setFoodChatInput] = useState('')
+  const [foodChatLoading, setFoodChatLoading] = useState(false)
 
   const openSheet = (name: string) => setActiveSheet(name)
   const closeSheet = () => setActiveSheet(null)
@@ -84,20 +86,19 @@ export default function Home() {
   useEffect(() => {
     async function loadData() {
       try {
-        const [sleepRes, weatherRes] = await Promise.all([
+        const [sleepRes, weatherRes, nutritionRes] = await Promise.all([
           fetch('/api/sleep'),
           fetch('/api/weather'),
+          fetch('/api/nutrition'),
         ])
-        const [sleep, weather] = await Promise.all([
+        const [sleep, weather, meals] = await Promise.all([
           sleepRes.json(),
           weatherRes.json(),
+          nutritionRes.json(),
         ])
         setSleepData(sleep)
         setWeatherData(weather)
-        const nutritionRes = await fetch('/api/nutrition')
-        const meals = await nutritionRes.json()
         setTodayMeals(Array.isArray(meals) ? meals : [])
-
       } catch (e) {
         console.error('Erreur chargement données', e)
       }
@@ -128,30 +129,54 @@ export default function Home() {
   }
 
   const saveMeal = async () => {
-  if (selectedFoods.length === 0 && !mealNotEaten) return
-  setSavingMeal(true)
-  try {
-    await fetch('/api/nutrition', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        meal_type: activeMeal,
-        aliments: mealNotEaten ? 'PAS_MANGE' : selectedFoods.join(', '),
-        quantite: mealNotEaten ? null : selectedQuantity,
-        heure: mealTime,
-        notes: mealNotEaten ? 'Repas sauté' : null,
-      }),
-    })
-    setSelectedFoods([])
-    setSelectedQuantity('Normal')
-    setMealNotEaten(false)
-    setFoodCategory(null)
-    // PAS de closeSheet() ici
-  } catch (e) {
-    console.error(e)
+    if (selectedFoods.length === 0 && !mealNotEaten) return
+    setSavingMeal(true)
+    try {
+      await fetch('/api/nutrition', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          meal_type: activeMeal,
+          aliments: mealNotEaten ? 'PAS_MANGE' : selectedFoods.join(', '),
+          quantite: mealNotEaten ? null : selectedQuantity,
+          heure: mealTime,
+          notes: mealNotEaten ? 'Repas sauté' : null,
+        }),
+      })
+      const nutritionRes = await fetch('/api/nutrition')
+      const meals = await nutritionRes.json()
+      setTodayMeals(Array.isArray(meals) ? meals : [])
+      setSelectedFoods([])
+      setSelectedQuantity('Normal')
+      setMealNotEaten(false)
+      setFoodCategory(null)
+    } catch (e) {
+      console.error(e)
+    }
+    setSavingMeal(false)
   }
-  setSavingMeal(false)
-}
+
+  const sendFoodChat = async () => {
+    if (!foodChatInput.trim()) return
+    setFoodChatLoading(true)
+    try {
+      const res = await fetch('/api/nutrition/parse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: foodChatInput }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setFoodChatInput('')
+        const nutritionRes = await fetch('/api/nutrition')
+        const meals = await nutritionRes.json()
+        setTodayMeals(Array.isArray(meals) ? meals : [])
+      }
+    } catch (e) {
+      console.error(e)
+    }
+    setFoodChatLoading(false)
+  }
 
   return (
     <main style={{ paddingBottom: 80 }}>
@@ -173,10 +198,7 @@ export default function Home() {
                 }
                 setBriefLoading(false)
               }}
-              style={{
-                width: '100%', padding: '12px', background: 'var(--accent)',
-                borderRadius: '10px', color: '#fff', fontSize: 12, fontWeight: 500,
-              }}
+              style={{ width: '100%', padding: '12px', background: 'var(--accent)', borderRadius: '10px', color: '#fff', fontSize: 12, fontWeight: 500 }}
             >
               {briefLoading ? 'Génération...' : 'Générer mon brief'}
             </button>
@@ -230,7 +252,7 @@ export default function Home() {
               icon="🍽️"
               iconBg="#1a0d00"
               title="Alimentation"
-              subtitle="Ajoute ton premier repas"
+              subtitle={todayMeals.length > 0 ? `${todayMeals.length} repas enregistrés` : 'Ajoute ton premier repas'}
               onClick={() => openSheet('food')}
             />
           </div>
@@ -263,9 +285,7 @@ export default function Home() {
               const res = await fetch('/api/brief')
               const data = await res.json()
               setBrief(data.brief)
-            } catch (e) {
-              setBrief('Erreur.')
-            }
+            } catch (e) { setBrief('Erreur.') }
             setBriefLoading(false)
           }} style={{ width: '100%', padding: 12, background: 'transparent', border: '0.5px solid var(--accent)', borderRadius: '10px', color: 'var(--accent)', fontSize: 12, fontWeight: 500 }}>
             {briefLoading ? 'Génération...' : 'Régénérer le brief'}
@@ -390,7 +410,8 @@ export default function Home() {
           {!foodCategory ? (
             <>
               <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 4 }}>Alimentation</div>
-              <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 20 }}>Qu'est-ce que tu as mangé ?</div>
+              <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 12 }}>Qu'est-ce que tu as mangé ?</div>
+
               {todayMeals.length > 0 && (
                 <div style={{ marginBottom: 16 }}>
                   <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Aujourd'hui</div>
@@ -405,6 +426,22 @@ export default function Home() {
                   ))}
                 </div>
               )}
+
+              {/* Mini chat */}
+              <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 6 }}>Dis-le moi en une phrase</div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', background: 'var(--surface-2)', borderRadius: 20, padding: '8px 14px', border: '0.5px solid var(--border)', marginBottom: 16 }}>
+                <input
+                  value={foodChatInput}
+                  onChange={e => setFoodChatInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && sendFoodChat()}
+                  placeholder="Ex : poulet riz brocolis à midi..."
+                  style={{ flex: 1, fontSize: 11, color: 'var(--text-primary)', background: 'transparent', border: 'none', outline: 'none' }}
+                />
+                <button onClick={sendFoodChat} style={{ width: 22, height: 22, background: foodChatLoading ? 'var(--text-muted)' : 'var(--accent)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: '#fff', border: 'none', cursor: 'pointer' }}>
+                  {foodChatLoading ? '...' : '↑'}
+                </button>
+              </div>
+
               <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
                 {['Matin', 'Midi', 'Soir', 'Snack'].map(m => (
                   <button key={m} onClick={() => {
@@ -419,7 +456,7 @@ export default function Home() {
                 <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>Heure</span>
                 <input type="time" value={mealTime} onChange={e => setMealTime(e.target.value)} style={{ background: 'var(--surface-2)', border: '0.5px solid var(--border)', borderRadius: 8, padding: '6px 10px', fontSize: 12, color: 'var(--text-primary)', outline: 'none' }} />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 20 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
                 {[
                   { key: 'proteins', emoji: '🥩', label: 'Protéines' },
                   { key: 'carbs', emoji: '🌾', label: 'Féculents' },
@@ -442,11 +479,6 @@ export default function Home() {
                   {savingMeal ? 'Enregistrement...' : 'Confirmer'}
                 </button>
               )}
-              <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 6 }}>Resto ou recette ? Dis-le moi</div>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center', background: 'var(--surface-2)', borderRadius: 20, padding: '8px 14px', border: '0.5px solid var(--border)' }}>
-                <span style={{ flex: 1, fontSize: 11, color: '#333' }}>Ex : pad thaï au resto ce soir...</span>
-                <div style={{ width: 22, height: 22, background: 'var(--accent)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: '#fff' }}>↑</div>
-              </div>
             </>
           ) : (
             <>

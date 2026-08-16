@@ -25,10 +25,24 @@ export async function POST(request: Request) {
     const date = new Date().toISOString().split('T')[0]
     const created_at = new Date().toISOString()
 
-    await sql`
-      INSERT INTO nutrition (date, meal_type, aliments, quantite, heure, notes, created_at)
-      VALUES (${date}, ${meal_type}, ${aliments}, ${quantite}, ${heure}, ${notes}, ${created_at})
+    // Vérifie si un repas du même type existe déjà aujourd'hui
+    const existing = await sql`
+      SELECT id FROM nutrition WHERE date = ${date} AND meal_type = ${meal_type}
     `
+    
+    if (existing.length > 0) {
+      // Met à jour au lieu d'insérer
+      await sql`
+        UPDATE nutrition 
+        SET aliments = ${aliments}, quantite = ${quantite}, heure = ${heure}, notes = ${notes}
+        WHERE date = ${date} AND meal_type = ${meal_type}
+      `
+    } else {
+      await sql`
+        INSERT INTO nutrition (date, meal_type, aliments, quantite, heure, notes, created_at)
+        VALUES (${date}, ${meal_type}, ${aliments}, ${quantite}, ${heure}, ${notes}, ${created_at})
+      `
+    }
 
     return NextResponse.json({ success: true })
   } catch (error: any) {
