@@ -8,6 +8,7 @@ import SectionCard from '@/components/SectionCard'
 import BottomNav from '@/components/BottomNav'
 import ChatScreen from '@/components/ChatScreen'
 import StatsScreen from '@/components/StatsScreen'
+import SportScreen from '@/components/SportScreen'
 
 function buildSleepStages(sleep: any): { type: 'deep' | 'light' | 'rem' | 'awake'; flex: number }[] {
   if (!sleep) return [
@@ -232,6 +233,7 @@ export default function Home() {
         </>
       )}
 
+      {activeTab === 'sport' && <SportScreen />}
       {activeTab === 'chat' && <ChatScreen />}
       {activeTab === 'stats' && <StatsScreen />}
 

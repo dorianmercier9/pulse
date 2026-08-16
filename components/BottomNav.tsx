@@ -1,9 +1,10 @@
 'use client'
 
-import { Home, MessageCircle, BarChart2 } from 'lucide-react'
+import { Home, MessageCircle, BarChart2, Dumbbell } from 'lucide-react'
 
 const items = [
   { icon: Home, label: 'Accueil', key: 'accueil' },
+  { icon: Dumbbell, label: 'Sport', key: 'sport' },
   { icon: MessageCircle, label: 'Chat', key: 'chat' },
   { icon: BarChart2, label: 'Stats', key: 'stats' },
 ]

@@ -123,8 +123,9 @@ export async function GET() {
     const hrv = parseHRV(hrvData)
     const fc = parseRestingHR(hrData)
 
-    const lat = 44.8378
-    const lon = -0.5792
+    const lat = 43.6047
+    const lon = 1.4442
+    
     const weather = await getWeather(lat, lon)
 
     const prompt = buildPrompt(sleep, hrv, fc, weather)
