@@ -9,15 +9,29 @@ import BottomNav from '@/components/BottomNav'
 import ChatScreen from '@/components/ChatScreen'
 import StatsScreen from '@/components/StatsScreen'
 
-const SLEEP_STAGES = [
-  { type: 'deep' as const, flex: 2 },
-  { type: 'light' as const, flex: 5 },
-  { type: 'rem' as const, flex: 2 },
-  { type: 'light' as const, flex: 4 },
-  { type: 'deep' as const, flex: 1 },
-  { type: 'awake' as const, flex: 1 },
-  { type: 'light' as const, flex: 3 },
-]
+function buildSleepStages(sleep: any) {
+  if (!sleep) return [
+    { type: 'deep' as const, flex: 2 },
+    { type: 'light' as const, flex: 5 },
+    { type: 'rem' as const, flex: 2 },
+    { type: 'light' as const, flex: 4 },
+    { type: 'deep' as const, flex: 1 },
+    { type: 'awake' as const, flex: 1 },
+    { type: 'light' as const, flex: 3 },
+  ]
+  const deep = sleep.profond_min ?? 0
+  const rem = sleep.rem_min ?? 0
+  const light = sleep.leger_min ?? 0
+  const awake = sleep.micro_reveils ?? 0
+  const total = deep + rem + light + Math.max(awake, 1)
+  return [
+    { type: 'deep' as const, flex: Math.max(1, Math.round(deep / total * 10)) },
+    { type: 'light' as const, flex: Math.max(1, Math.round(light / total * 10 * 0.4)) },
+    { type: 'rem' as const, flex: Math.max(1, Math.round(rem / total * 10)) },
+    { type: 'light' as const, flex: Math.max(1, Math.round(light / total * 10 * 0.6)) },
+    { type: 'awake' as const, flex: Math.max(1, Math.round(awake / 5)) },
+  ]
+}
 
 export default function Home() {
   const [activeMeal, setActiveMeal] = useState('Matin')
@@ -166,7 +180,7 @@ export default function Home() {
               : '—'}
           />
 
-          <SleepStrip stages={SLEEP_STAGES} />
+          <SleepStrip stages={buildSleepStages(sleepData?.sleep)}
 
           <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 8 }}>
             <SectionCard
